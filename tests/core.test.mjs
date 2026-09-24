@@ -281,7 +281,12 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     assert.throws(() => installSkill("codex", { homeDir: temporary, command }), /skill_already_exists/);
     const version = spawnSync(process.execPath, ["scripts/cli.mjs", "--version"], { encoding: "utf8" });
     assert.equal(version.status, 0);
-    assert.equal(version.stdout.trim(), "0.2.0");
+    assert.equal(version.stdout.trim(), "0.2.1");
+    const alias = path.join(temporary, "jev-cu-jp.mjs");
+    fs.symlinkSync(path.resolve("scripts/cli.mjs"), alias);
+    const linked = spawnSync(process.execPath, [alias, "--version"], { encoding: "utf8" });
+    assert.equal(linked.status, 0);
+    assert.equal(linked.stdout.trim(), "0.2.1");
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }

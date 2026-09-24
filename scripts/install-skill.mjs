@@ -38,7 +38,7 @@ export function installSkill(target, {
   return destination;
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2);
   const dryRun = args[1] === "--dry-run";
   if (args.length > (dryRun ? 2 : 1)) {
