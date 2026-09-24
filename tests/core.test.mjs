@@ -281,6 +281,24 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     assert.match(fs.readFileSync(path.join(destination, "SKILL.md"), "utf8"), /opt\/homebrew\/opt\/jev-cu-jp\/bin\/jev-cu-jp/);
     assert.throws(() => installSkill("codex", { homeDir: temporary, command }), /skill_already_exists/);
     assert.equal(installSkill("codex", { homeDir: temporary, command, allowExisting: true }), destination);
+    const skillFile = path.join(destination, "SKILL.md");
+    const previousTemplate = fs.readFileSync(new URL("fixtures/skill-v0.2.2.md", import.meta.url), "utf8");
+    fs.writeFileSync(skillFile, previousTemplate.replaceAll("{{NEXT_COMMAND}}", command));
+    assert.throws(() => installSkill("codex", { homeDir: temporary, command, allowExisting: true }), /skill_already_exists/);
+    const setup = spawnSync(process.execPath, ["scripts/cli.mjs", "setup", "codex", "--refresh-skill"], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: temporary, JEV_CU_JP_COMMAND: "/opt/homebrew/opt/jev-cu-jp/bin/jev-cu-jp" },
+    });
+    assert.equal(setup.status, 0, setup.stderr);
+    assert.match(setup.stdout, /Skill installed:/);
+    assert.match(fs.readFileSync(skillFile, "utf8"), /getAXState\(\{emit:false\}\)/);
+    fs.appendFileSync(skillFile, "\nLocal customization\n");
+    const refused = spawnSync(process.execPath, ["scripts/cli.mjs", "setup", "codex", "--refresh-skill"], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: temporary, JEV_CU_JP_COMMAND: "/opt/homebrew/opt/jev-cu-jp/bin/jev-cu-jp" },
+    });
+    assert.equal(refused.status, 1);
+    assert.match(refused.stderr, /skill_already_exists/);
     await verifyApiKey("typesafe", "test-key-value", {
       decideFn: async ({ provider, apiKey, candidates }) => {
         assert.equal(provider, "typesafe");
@@ -297,12 +315,12 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     }), /invalid_api_key/);
     const version = spawnSync(process.execPath, ["scripts/cli.mjs", "--version"], { encoding: "utf8" });
     assert.equal(version.status, 0);
-    assert.equal(version.stdout.trim(), "0.2.2");
+    assert.equal(version.stdout.trim(), "0.2.3");
     const alias = path.join(temporary, "jev-cu-jp.mjs");
     fs.symlinkSync(path.resolve("scripts/cli.mjs"), alias);
     const linked = spawnSync(process.execPath, [alias, "--version"], { encoding: "utf8" });
     assert.equal(linked.status, 0);
-    assert.equal(linked.stdout.trim(), "0.2.2");
+    assert.equal(linked.stdout.trim(), "0.2.3");
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }

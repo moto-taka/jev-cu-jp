@@ -20,19 +20,4 @@ This command accepts one JSON file path or JSON on stdin and returns one compact
 4. Match `decision.targetIndex` to the same observation. Review `policy.verdict`, the actual label, the requested action, and the user's existing authorization. `proceed` is a recommendation, not permission. Resolve `confirm`, `escalate`, `stop`, missing targets, and missing action parameters before acting. If the UI changed while deciding, discard the result and observe again.
 5. Execute one authorized action with the host Computer Use tool. Observe again and verify the success condition. Stop after two ineffective repeats.
 
-## Keep UI observations compact
-
-For Codex desktop `cua_repl`, read a large accessibility tree inside the tool with `getAXState({emit:false})`. Filter it there, then return only the relevant indexed candidates through `nodeRepl.write`. For example, adapt the search terms to the current goal:
-
-```javascript
-var ax = await tab.getAXState({emit:false});
-var candidates = ax.split(/\r?\n/)
-  .filter(line => /^\s*\d+\s/.test(line) && /検索|Search/.test(line))
-  .slice(0, 40)
-  .map(line => line.split(/,\s*(?:Value|Help|ID|URL):/)[0].trim());
-nodeRepl.write(JSON.stringify({candidates}));
-```
-
-Keep the original indices. Remove private labels and unrelated text before returning candidates or sending them to Jev. If the target is absent, widen the filter on a fresh observation; never guess an index. After an action, observe again with `emit:false` and return only the evidence needed to verify it. Other Computer Use hosts should likewise filter before their observation reaches the agent when their tool supports it. A full accessibility dump in the agent context defeats the intended context saving.
-
 The decision command does not operate the computer. It does not supply coordinates or typed text; derive those only from the user's request and the current UI. Jev's `done` score is not proof of completion. Report the observed result and any manual takeover. To use an already open Chrome profile, have the Computer Use tool attach to that running Chrome session; this skill never copies a profile.

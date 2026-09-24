@@ -17,6 +17,8 @@ jev-cu-jp setup codex --clipboard
 
 The CLI and Codex Skill are installed. Setup makes one short API call to verify the key before saving it in `~/.config/jev-cu-jp/config.json` with owner-only permissions. You can rerun the same setup command to update the key. Restart Codex, then ask it to use jev-cu-jp in your open Chrome window. Replace `codex` with `claude` or `pi` for those hosts. For Vercel AI Gateway, use `jev-cu-jp setup codex --provider vercel --clipboard`.
 
+If you installed the v0.2.2 Skill, upgrade the CLI and run `jev-cu-jp setup codex --refresh-skill`. It updates only an unmodified distributed Skill. Your saved key does not need to be entered again.
+
 Homebrew does not provide a Computer Use tool. Each host still needs a way to control the running browser. Omit `--clipboard` if you prefer to provide the key through an environment variable at runtime.
 
 ## Setup
@@ -68,6 +70,8 @@ The synthetic example contains:
 
 The CLI also accepts JSON on stdin. It returns the selected index, action type, confidence, policy verdict, and usage. It does not click. Confirm that the selected index still points to the same element, perform one authorized action with the host's Computer Use tool, then observe the result. A `proceed` verdict is a recommendation, not authorization. A Jev `done` score alone does not prove completion.
 
+To save agent context, filter large UI observations inside the Computer Use tool before returning them to the agent. The [Skill shows a Codex `cua_repl` example](skills/jev-cu-jp/SKILL.md#keep-ui-observations-compact). On one Japanese Wikipedia page, this reduced 34,375 characters of UI output to 155 characters of relevant candidates. This measures UI output characters, not total billed tokens or end-to-end speed across Codex and Jev. Skip the Jev call when the target is already clear.
+
 ## Agent Skill
 
 Install the [Skill](skills/jev-cu-jp/SKILL.md) for each host you use:
@@ -78,7 +82,7 @@ node scripts/install-skill.mjs claude
 node scripts/install-skill.mjs pi
 ```
 
-It installs to `~/.codex/skills/jev-cu-jp/`, `~/.claude/skills/jev-cu-jp/`, or `~/.pi/agent/skills/jev-cu-jp/`, embeds the absolute CLI path, and refuses to overwrite an existing skill. Restart the host after installation. To use an already open Chrome profile, configure the host's Computer Use tool to control that running session. This repository never copies a profile.
+It installs to `~/.codex/skills/jev-cu-jp/`, `~/.claude/skills/jev-cu-jp/`, or `~/.pi/agent/skills/jev-cu-jp/`, embeds the absolute CLI path, and refuses to overwrite an existing skill. Homebrew's `--refresh-skill` updates only an unmodified earlier release. Restart the host after installation. To use an already open Chrome profile, configure the host's Computer Use tool to control that running session. This repository never copies a profile.
 
 With Homebrew, use `jev-cu-jp setup codex|claude|pi --clipboard` instead. `jev-cu-jp doctor` reports the provider and whether a key is available, without printing the key. The installed Skill points to a stable Homebrew command across upgrades.
 

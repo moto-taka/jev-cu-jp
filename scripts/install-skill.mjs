@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const repoDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -11,6 +12,16 @@ const locations = {
   claude: ".claude/skills",
   pi: ".pi/agent/skills",
 };
+const previousTemplateHashes = new Set([
+  "a79f9d358755a321e37c61b32d78b46a43f6c9aa58b1d40882b1c07f8045df77", // v0.2.2
+]);
+
+function isUnmodifiedPreviousSkill(content, command) {
+  const renderedCommand = `\`${command}\``;
+  if (!content.includes(renderedCommand)) return false;
+  const template = content.replace(renderedCommand, "`{{NEXT_COMMAND}}`");
+  return previousTemplateHashes.has(createHash("sha256").update(template).digest("hex"));
+}
 
 export function shellQuote(value) {
   return `'${value.replaceAll("'", "'\\''")}'`;
@@ -21,6 +32,7 @@ export function installSkill(target, {
   homeDir = os.homedir(),
   dryRun = false,
   allowExisting = false,
+  refreshManaged = false,
 } = {}) {
   if (!Object.hasOwn(locations, target)) throw new Error("invalid_target");
   const destination = path.join(homeDir, locations[target], "jev-cu-jp");
@@ -30,10 +42,19 @@ export function installSkill(target, {
   try { fs.lstatSync(destination); exists = true; }
   catch (error) { if (error?.code !== "ENOENT") throw error; }
   if (exists) {
-    if (allowExisting) {
-      try {
-        if (fs.readFileSync(path.join(destination, "SKILL.md"), "utf8") === content) return destination;
-      } catch { /* Keep the existing directory untouched. */ }
+    try {
+      const skillFile = path.join(destination, "SKILL.md");
+      if (!fs.lstatSync(destination).isDirectory() || !fs.lstatSync(skillFile).isFile()) {
+        throw new Error("skill_already_exists");
+      }
+      const installed = fs.readFileSync(skillFile, "utf8");
+      if (allowExisting && installed === content) return destination;
+      if (refreshManaged && isUnmodifiedPreviousSkill(installed, command)) {
+        if (!dryRun) fs.writeFileSync(skillFile, content);
+        return destination;
+      }
+    } catch (error) {
+      if (error?.message !== "skill_already_exists" && error?.code !== "ENOENT") throw error;
     }
     throw new Error("skill_already_exists");
   }

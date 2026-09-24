@@ -14,7 +14,7 @@ function usage() {
   process.stdout.write([
     `jev-cu-jp ${packageInfo.version}`,
     "Usage:",
-    "  jev-cu-jp setup codex|claude|pi [--provider typesafe|vercel] [--clipboard|--key-stdin]",
+    "  jev-cu-jp setup codex|claude|pi [--provider typesafe|vercel] [--clipboard|--key-stdin] [--refresh-skill]",
     "  jev-cu-jp next [input.json]",
     "  jev-cu-jp doctor",
     "  jev-cu-jp --version",
@@ -23,12 +23,13 @@ function usage() {
 
 function parseSetup(args) {
   const host = args.shift();
-  const parsed = { host, provider: configuredProvider() ?? "typesafe", keySource: null };
+  const parsed = { host, provider: configuredProvider() ?? "typesafe", keySource: null, refreshSkill: false };
   while (args.length) {
     const option = args.shift();
     if (option === "--provider" && args.length) parsed.provider = args.shift();
     else if (option === "--clipboard" && !parsed.keySource) parsed.keySource = "clipboard";
     else if (option === "--key-stdin" && !parsed.keySource) parsed.keySource = "stdin";
+    else if (option === "--refresh-skill" && !parsed.refreshSkill) parsed.refreshSkill = true;
     else throw new Error("invalid_arguments");
   }
   if (!Object.hasOwn(keyNames, parsed.provider)) throw new Error("invalid_provider");
@@ -67,21 +68,22 @@ export async function verifyApiKey(provider, key, { decideFn = decide } = {}) {
 }
 
 async function setup(args) {
-  const { host, provider, keySource } = parseSetup([...args]);
+  const { host, provider, keySource, refreshSkill } = parseSetup([...args]);
   const executable = process.env.JEV_CU_JP_COMMAND
     ? shellQuote(process.env.JEV_CU_JP_COMMAND)
     : `node ${shellQuote(fileURLToPath(import.meta.url))}`;
   const command = `${executable} next`;
-  installSkill(host, { command, dryRun: true, allowExisting: true });
+  installSkill(host, { command, dryRun: true, allowExisting: true, refreshManaged: refreshSkill });
   const key = keySource ? await readKey(keySource) : null;
   if (keySource && (!key || key.length > 8192)) throw new Error("empty_api_key");
   if (key) {
     await verifyApiKey(provider, key);
     saveProviderKey(provider, key);
   }
-  const destination = installSkill(host, { command, allowExisting: true });
+  const destination = installSkill(host, { command, allowExisting: true, refreshManaged: refreshSkill });
   process.stdout.write(`Skill installed: ${destination}\n`);
   if (key) process.stdout.write(`Key saved locally for ${provider}: ${CONFIG_FILE}\n`);
+  else if (configuredKey(provider)) process.stdout.write(`Key already saved locally for ${provider}: ${CONFIG_FILE}\n`);
   else process.stdout.write(`Set ${keyNames[provider]} or run setup with --clipboard / --key-stdin.\n`);
   process.stdout.write("Restart the agent to load the skill.\n");
 }

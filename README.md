@@ -17,6 +17,8 @@ jev-cu-jp setup codex --clipboard
 
 これでCLIとCodex用Skillが入り、鍵は `~/.config/jev-cu-jp/config.json` に本人だけが読める権限で保存されます。設定時に短いAPI呼び出しで鍵を確認し、失敗した鍵は保存しません。同じ `setup` コマンドを再実行して鍵を更新できます。Codexを再起動したら「今開いているChromeでjev-cu-jpを使って、○○して」と頼めます。Claude CodeやPiなら `codex` を `claude` または `pi` に変えます。Vercel AI Gatewayを使う場合は `setup codex --provider vercel --clipboard` です。
 
+既にv0.2.2のSkillを導入した場合は、CLIを更新してから `jev-cu-jp setup codex --refresh-skill` を実行してください。配布時のままのSkillだけ更新し、手で編集したSkillは保護します。保存済みの鍵は入れ直す必要がありません。
+
 Homebrewは画面操作ツールを追加しません。各エージェントが起動中のChromeを操作できる環境は別途必要です。鍵を保存したくない場合は `--clipboard` を省き、利用時に環境変数で渡せます。
 
 ## 準備
@@ -70,11 +72,13 @@ npm run next -- examples/next-month.json
 
 JSONはファイル名を省いて標準入力から渡すこともできます。返却するのは選択した索引、操作の種類、確信度、確認ゲート、利用量です。CLIは画面をクリックしません。選択後は同じ画面状態に対象があることを確かめ、エージェントの Computer Use で一手だけ実行し、画面を読み直して結果を確認してください。
 
+トークン節約には画面観察の出力も絞る必要があります。Codexの `cua_repl` では、[Skillの例](skills/jev-cu-jp/SKILL.md#keep-ui-observations-compact)のように大きな画面情報をツール内で処理し、関係する候補だけをCodexへ返します。Wikipedia日本語版の一画面では、画面情報34,375文字を候補155文字まで絞れました。これは画面出力の文字数の比較で、CodexとJevを合わせた課金トークン・速度の改善値ではありません。操作対象が明白な場合はJev呼び出し自体を省けます。
+
 `policy.verdict` が `proceed` でも操作の許可を意味しません。`confirm` は送信・削除・決済などを含む可能性、`escalate` は判断不足、`stop` は続行停止です。モデルの完了確率だけで成功と報告しないでください。
 
 ## Agent Skill
 
-付属の [Skill](skills/jev-cu-jp/SKILL.md) を各エージェントへ登録できます。インストーラーはCLIの絶対パスをSkillに埋め込み、既存の同名Skillがある場合は上書きせず停止します。
+付属の [Skill](skills/jev-cu-jp/SKILL.md) を各エージェントへ登録できます。インストーラーはCLIの絶対パスをSkillに埋め込み、既存の同名Skillがある場合は上書きせず停止します。Homebrew版の `--refresh-skill` は、変更されていない旧版Skillだけを更新します。
 
 ```bash
 node scripts/install-skill.mjs codex
