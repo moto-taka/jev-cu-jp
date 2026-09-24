@@ -17,13 +17,13 @@ jev-cu-jp setup codex --clipboard
 
 これでCLIとCodex用Skillが入ります。`setup` はAPIへの短い呼び出しで鍵を確認し、成功した鍵だけを `~/.config/jev-cu-jp/config.json` に本人だけが読める権限で保存します。Codexを再起動したら、たとえば「今開いているChromeでJevを使い、Wikipediaを日本語表示に切り替えて」と頼めます。
 
-Claude CodeやPiでは `setup` の `codex` を `claude` または `pi` に変えてください。Vercel AI Gatewayを使う場合は `jev-cu-jp setup codex --provider vercel --clipboard` です。鍵を更新するときは、同じ `setup` コマンドを再実行します。
+Claude Codeでも使う場合は、続けて `jev-cu-jp setup claude` を実行してください。CodexとClaude Codeは `~/.agents/skills/jev-cu-jp/` の同じSkillを参照します。Piで使う場合は `jev-cu-jp setup pi` です。Vercel AI Gatewayを使う場合は `jev-cu-jp setup codex --provider vercel --clipboard` で設定します。鍵を更新するときは、同じ `setup` コマンドを再実行します。
 
 Homebrewは画面操作ツールを追加しません。各エージェントが起動中のChromeを操作できる環境は別途必要です。鍵を保存したくない場合は `--clipboard` を省き、利用時に環境変数で渡せます。
 
-### v0.2.2から更新する
+### 既存版から更新する
 
-既にv0.2.2のSkillを導入した場合は、次を実行してください。
+既にSkillを導入している場合は、次を実行してください。
 
 ```bash
 brew update
@@ -31,7 +31,7 @@ brew upgrade moto-taka/tap/jev-cu-jp
 jev-cu-jp setup codex --refresh-skill
 ```
 
-`--refresh-skill` は配布時のままの旧Skillだけを更新します。手で編集したSkillは上書きしません。保存済みの鍵は入れ直す必要がありません。Claude CodeやPiのSkillを更新する場合は、最後のコマンドの `codex` を変更してください。更新後はエージェントを再起動します。
+`setup` は変更されていない旧Skillを共有場所へ移します。`--refresh-skill` はv0.2.2の本文も更新します。手で編集したSkillは上書きしません。保存済みの鍵は入れ直す必要がありません。Claude Codeからも使う場合は `jev-cu-jp setup claude` を追加し、両方のエージェントを再起動してください。
 
 ## ソースから使う
 
@@ -94,7 +94,7 @@ Codexで大きな画面情報をそのまま受け取ると、候補だけをJev
 
 ## Agent Skill
 
-付属の [Skill](skills/jev-cu-jp/SKILL.md) を各エージェントへ登録できます。インストーラーはCLIの絶対パスをSkillに埋め込み、既存の同名Skillがある場合は上書きせず停止します。Homebrew版の `--refresh-skill` は、変更されていない旧版Skillだけを更新します。
+付属の [Skill](skills/jev-cu-jp/SKILL.md) を各エージェントへ登録できます。インストーラーはCLIの絶対パスをSkillに埋め込み、`~/.agents/skills/jev-cu-jp/` を正本にします。手で編集した同名Skillがあれば上書きせず停止します。
 
 ```bash
 node scripts/install-skill.mjs codex
@@ -102,9 +102,9 @@ node scripts/install-skill.mjs claude
 node scripts/install-skill.mjs pi
 ```
 
-登録先はそれぞれ `~/.codex/skills/jev-cu-jp/`、`~/.claude/skills/jev-cu-jp/`、`~/.pi/agent/skills/jev-cu-jp/` です。エージェントを再起動して読み込ませてください。Chromeのログイン状態を使う場合は、各Computer Useツールが**起動中のChrome**を操作できるようにします。このツールはChromeプロファイルをコピーしません。
+Codex、Claude Code、PiのSkillディレクトリには共有正本へのシンボリックリンクを作ります。必要なエージェントを再起動して読み込ませてください。Chromeのログイン状態を使う場合は、各Computer Useツールが**起動中のChrome**を操作できるようにします。このツールはChromeプロファイルをコピーしません。
 
-Homebrew版では `jev-cu-jp setup codex|claude|pi --clipboard` を使います。`jev-cu-jp doctor` で接続先と鍵の有無を確認できます（鍵の値は表示しません）。SkillはHomebrewの更新後も同じCLIを呼ぶように登録されます。
+Homebrew版では `jev-cu-jp setup codex|claude|pi --clipboard` を使います。鍵を一度保存した後は、別のエージェントを追加するときに `--clipboard` は不要です。`jev-cu-jp doctor` で接続先と鍵の有無を確認できます（鍵の値は表示しません）。SkillはHomebrewの更新後も同じCLIを呼ぶように登録されます。
 
 ## 検証と制限
 

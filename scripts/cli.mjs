@@ -82,6 +82,7 @@ async function setup(args) {
   }
   const destination = installSkill(host, { command, allowExisting: true, refreshManaged: refreshSkill });
   process.stdout.write(`Skill installed: ${destination}\n`);
+  process.stdout.write(`Shared Skill: ${fs.realpathSync(destination)}\n`);
   if (key) process.stdout.write(`Key saved locally for ${provider}: ${CONFIG_FILE}\n`);
   else if (configuredKey(provider)) process.stdout.write(`Key already saved locally for ${provider}: ${CONFIG_FILE}\n`);
   else process.stdout.write(`Set ${keyNames[provider]} or run setup with --clipboard / --key-stdin.\n`);

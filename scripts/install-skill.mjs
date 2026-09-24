@@ -12,6 +12,7 @@ const locations = {
   claude: ".claude/skills",
   pi: ".pi/agent/skills",
 };
+const sharedLocation = ".agents/skills/jev-cu-jp";
 const previousTemplateHashes = new Set([
   "a79f9d358755a321e37c61b32d78b46a43f6c9aa58b1d40882b1c07f8045df77", // v0.2.2
 ]);
@@ -21,6 +22,25 @@ function isUnmodifiedPreviousSkill(content, command) {
   if (!content.includes(renderedCommand)) return false;
   const template = content.replace(renderedCommand, "`{{NEXT_COMMAND}}`");
   return previousTemplateHashes.has(createHash("sha256").update(template).digest("hex"));
+}
+
+function lstatIfExists(file) {
+  try { return fs.lstatSync(file); }
+  catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function readSkillDirectory(directory) {
+  if (!lstatIfExists(directory)?.isDirectory()) throw new Error("skill_already_exists");
+  const skillFile = path.join(directory, "SKILL.md");
+  if (!lstatIfExists(skillFile)?.isFile()) throw new Error("skill_already_exists");
+  return fs.readFileSync(skillFile, "utf8");
+}
+
+function isManagedContent(installed, expected, command, refreshManaged) {
+  return installed === expected || (refreshManaged && isUnmodifiedPreviousSkill(installed, command));
 }
 
 export function shellQuote(value) {
@@ -36,31 +56,48 @@ export function installSkill(target, {
 } = {}) {
   if (!Object.hasOwn(locations, target)) throw new Error("invalid_target");
   const destination = path.join(homeDir, locations[target], "jev-cu-jp");
+  const shared = path.join(homeDir, sharedLocation);
   const content = source.replaceAll("{{NEXT_COMMAND}}", command);
   if (content === source) throw new Error("skill_template_invalid");
-  let exists = false;
-  try { fs.lstatSync(destination); exists = true; }
-  catch (error) { if (error?.code !== "ENOENT") throw error; }
-  if (exists) {
-    try {
-      const skillFile = path.join(destination, "SKILL.md");
-      if (!fs.lstatSync(destination).isDirectory() || !fs.lstatSync(skillFile).isFile()) {
-        throw new Error("skill_already_exists");
-      }
-      const installed = fs.readFileSync(skillFile, "utf8");
-      if (allowExisting && installed === content) return destination;
-      if (refreshManaged && isUnmodifiedPreviousSkill(installed, command)) {
-        if (!dryRun) fs.writeFileSync(skillFile, content);
-        return destination;
-      }
-    } catch (error) {
-      if (error?.message !== "skill_already_exists" && error?.code !== "ENOENT") throw error;
-    }
+  const sharedStat = lstatIfExists(shared);
+  const destinationStat = lstatIfExists(destination);
+  const sharedContent = sharedStat ? readSkillDirectory(shared) : null;
+  if (sharedContent !== null && !isManagedContent(sharedContent, content, command, refreshManaged)) {
     throw new Error("skill_already_exists");
   }
-  if (!dryRun) {
-    fs.mkdirSync(destination, { recursive: true });
-    fs.writeFileSync(path.join(destination, "SKILL.md"), content, { flag: "wx", mode: 0o644 });
+  if (destinationStat) {
+    if (!allowExisting) throw new Error("skill_already_exists");
+    if (destinationStat.isSymbolicLink()) {
+      const link = fs.readlinkSync(destination);
+      const linkedPath = path.resolve(path.dirname(destination), link);
+      if (linkedPath !== shared &&
+          (!sharedStat || fs.realpathSync(destination) !== fs.realpathSync(shared))) {
+        throw new Error("skill_already_exists");
+      }
+    } else if (destinationStat.isDirectory()) {
+      if (fs.readdirSync(destination).join("\n") !== "SKILL.md" ||
+          !isManagedContent(readSkillDirectory(destination), content, command, refreshManaged)) {
+        throw new Error("skill_already_exists");
+      }
+    } else throw new Error("skill_already_exists");
+  }
+  if (dryRun) return destination;
+  fs.mkdirSync(path.dirname(shared), { recursive: true });
+  if (!sharedStat) {
+    if (destinationStat?.isDirectory()) fs.renameSync(destination, shared);
+    else {
+      fs.mkdirSync(shared);
+      fs.writeFileSync(path.join(shared, "SKILL.md"), content, { flag: "wx", mode: 0o644 });
+    }
+  } else if (destinationStat?.isDirectory()) {
+    fs.unlinkSync(path.join(destination, "SKILL.md"));
+    fs.rmdirSync(destination);
+  }
+  if (sharedContent !== content) fs.writeFileSync(path.join(shared, "SKILL.md"), content);
+  if (!destinationStat?.isSymbolicLink()) {
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    const linkTarget = process.platform === "win32" ? shared : path.relative(path.dirname(destination), shared);
+    fs.symlinkSync(linkTarget, destination, process.platform === "win32" ? "junction" : "dir");
   }
   return destination;
 }

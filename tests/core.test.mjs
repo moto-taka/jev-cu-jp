@@ -278,6 +278,10 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     if (process.platform !== "win32") assert.equal(fs.statSync(configFile).mode & 0o777, 0o600);
     const command = "'/opt/homebrew/opt/jev-cu-jp/bin/jev-cu-jp' next";
     const destination = installSkill("codex", { homeDir: temporary, command });
+    const shared = path.join(temporary, ".agents/skills/jev-cu-jp");
+    assert.ok(fs.lstatSync(destination).isSymbolicLink());
+    assert.equal(fs.realpathSync(destination), fs.realpathSync(shared));
+    assert.equal(fs.realpathSync(installSkill("claude", { homeDir: temporary, command })), fs.realpathSync(shared));
     assert.match(fs.readFileSync(path.join(destination, "SKILL.md"), "utf8"), /opt\/homebrew\/opt\/jev-cu-jp\/bin\/jev-cu-jp/);
     assert.throws(() => installSkill("codex", { homeDir: temporary, command }), /skill_already_exists/);
     assert.equal(installSkill("codex", { homeDir: temporary, command, allowExisting: true }), destination);
@@ -291,6 +295,7 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     });
     assert.equal(setup.status, 0, setup.stderr);
     assert.match(setup.stdout, /Skill installed:/);
+    assert.ok(setup.stdout.includes(`Shared Skill: ${fs.realpathSync(shared)}`));
     assert.match(fs.readFileSync(skillFile, "utf8"), /getAXState\(\{emit:false\}\)/);
     fs.appendFileSync(skillFile, "\nLocal customization\n");
     const refused = spawnSync(process.execPath, ["scripts/cli.mjs", "setup", "codex", "--refresh-skill"], {
@@ -315,12 +320,40 @@ test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけ�
     }), /invalid_api_key/);
     const version = spawnSync(process.execPath, ["scripts/cli.mjs", "--version"], { encoding: "utf8" });
     assert.equal(version.status, 0);
-    assert.equal(version.stdout.trim(), "0.2.3");
+    assert.equal(version.stdout.trim(), "0.2.4");
     const alias = path.join(temporary, "jev-cu-jp.mjs");
     fs.symlinkSync(path.resolve("scripts/cli.mjs"), alias);
     const linked = spawnSync(process.execPath, [alias, "--version"], { encoding: "utf8" });
     assert.equal(linked.status, 0);
-    assert.equal(linked.stdout.trim(), "0.2.3");
+    assert.equal(linked.stdout.trim(), "0.2.4");
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test("既存のCodexとClaude Skillを共有し、手編集は守る", () => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "jev-shared-skill-test-"));
+  try {
+    const command = "'/opt/homebrew/opt/jev-cu-jp/bin/jev-cu-jp' next";
+    const codex = path.join(temporary, ".codex/skills/jev-cu-jp");
+    const claude = path.join(temporary, ".claude/skills/jev-cu-jp");
+    const shared = path.join(temporary, ".agents/skills/jev-cu-jp");
+    fs.mkdirSync(codex, { recursive: true });
+    fs.writeFileSync(path.join(codex, "SKILL.md"),
+      fs.readFileSync(new URL("../skills/jev-cu-jp/SKILL.md", import.meta.url), "utf8")
+        .replaceAll("{{NEXT_COMMAND}}", command));
+    assert.equal(installSkill("codex", { homeDir: temporary, command, allowExisting: true }), codex);
+    assert.ok(fs.lstatSync(codex).isSymbolicLink());
+    assert.equal(fs.realpathSync(codex), fs.realpathSync(shared));
+    fs.mkdirSync(claude, { recursive: true });
+    fs.writeFileSync(path.join(claude, "SKILL.md"), "custom Claude Skill\n");
+    assert.throws(() => installSkill("claude", { homeDir: temporary, command, allowExisting: true }),
+      /skill_already_exists/);
+    assert.equal(fs.readFileSync(path.join(claude, "SKILL.md"), "utf8"), "custom Claude Skill\n");
+    fs.writeFileSync(path.join(claude, "SKILL.md"), fs.readFileSync(path.join(shared, "SKILL.md"), "utf8"));
+    assert.equal(installSkill("claude", { homeDir: temporary, command, allowExisting: true }), claude);
+    assert.ok(fs.lstatSync(claude).isSymbolicLink());
+    assert.equal(fs.realpathSync(claude), fs.realpathSync(shared));
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
