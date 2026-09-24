@@ -15,13 +15,25 @@ brew install moto-taka/tap/jev-cu-jp
 jev-cu-jp setup codex --clipboard
 ```
 
-The CLI and Codex Skill are installed. Setup makes one short API call to verify the key before saving it in `~/.config/jev-cu-jp/config.json` with owner-only permissions. You can rerun the same setup command to update the key. Restart Codex, then ask it to use jev-cu-jp in your open Chrome window. Replace `codex` with `claude` or `pi` for those hosts. For Vercel AI Gateway, use `jev-cu-jp setup codex --provider vercel --clipboard`.
+This installs the CLI and Codex Skill. Setup makes one short API call to verify the key, then saves a valid key in `~/.config/jev-cu-jp/config.json` with owner-only permissions. Restart Codex and ask it to use Jev in your open Chrome window. For example, ask it to switch Wikipedia to Japanese.
 
-If you installed the v0.2.2 Skill, upgrade the CLI and run `jev-cu-jp setup codex --refresh-skill`. It updates only an unmodified distributed Skill. Your saved key does not need to be entered again.
+For Claude Code or Pi, replace `codex` in the setup command with `claude` or `pi`. For Vercel AI Gateway, run `jev-cu-jp setup codex --provider vercel --clipboard`. Rerun the same setup command to replace a key.
 
 Homebrew does not provide a Computer Use tool. Each host still needs a way to control the running browser. Omit `--clipboard` if you prefer to provide the key through an environment variable at runtime.
 
-## Setup
+### Upgrade from v0.2.2
+
+If you installed the v0.2.2 Skill, run:
+
+```bash
+brew update
+brew upgrade moto-taka/tap/jev-cu-jp
+jev-cu-jp setup codex --refresh-skill
+```
+
+`--refresh-skill` updates only an unmodified earlier Skill. It does not overwrite your edits, and you do not need to enter a saved key again. Replace `codex` with `claude` or `pi` to update those Skills. Restart the host after the update.
+
+## Run from source
 
 Requires Node.js 20 or newer. There are no external npm packages.
 
@@ -70,7 +82,11 @@ The synthetic example contains:
 
 The CLI also accepts JSON on stdin. It returns the selected index, action type, confidence, policy verdict, and usage. It does not click. Confirm that the selected index still points to the same element, perform one authorized action with the host's Computer Use tool, then observe the result. A `proceed` verdict is a recommendation, not authorization. A Jev `done` score alone does not prove completion.
 
-To save agent context, filter large UI observations inside the Computer Use tool before returning them to the agent. The [Skill shows a Codex `cua_repl` example](skills/jev-cu-jp/SKILL.md#keep-ui-observations-compact). On one Japanese Wikipedia page, this reduced 34,375 characters of UI output to 155 characters of relevant candidates. This measures UI output characters, not total billed tokens or end-to-end speed across Codex and Jev. Skip the Jev call when the target is already clear.
+### UI output and token use
+
+If Codex receives the full UI observation, sending short candidates to Jev does not reduce Codex's context. The [Skill's `cua_repl` example](skills/jev-cu-jp/SKILL.md#keep-ui-observations-compact) uses `getAXState({emit:false})` to filter the observation inside the tool and return only candidates for the current goal.
+
+In a Chrome check on September 24, 2026, a Japanese Wikipedia page produced 34,361 characters of UI output. The candidate JSON for its search field and button was 90 characters. These are output character counts. Total billed tokens and elapsed time across Codex and Jev have not been measured. If the target is clear, use Computer Use directly without a Jev call.
 
 ## Agent Skill
 
