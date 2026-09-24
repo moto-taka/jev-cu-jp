@@ -4,6 +4,8 @@ import { parseAX, selectCandidates, buildContext } from "../scripts/loop.mjs";
 import { evaluatePolicy, matchSensitive } from "../scripts/policy.mjs";
 import { ask, buildQuestions, normalizeDecision, sanitizeLabel, GATEWAY_ENDPOINT, GATEWAY_MODEL, DEFAULT_ENDPOINT, DEFAULT_MODEL } from "../scripts/jev-decide.mjs";
 import { evaluateNext, validateInput } from "../scripts/jev-next.mjs";
+import { configuredKey, configuredProvider, readConfig, saveProviderKey } from "../scripts/config.mjs";
+import { installSkill } from "../scripts/install-skill.mjs";
 
 const CALENDAR_AX = [
   'Window: "Calendar", App: Calendar.',
@@ -261,7 +263,29 @@ test("sanitizeLabel 去掉长 URL 并限长", () => {
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { runTask } from "../scripts/loop.mjs";
+
+test("CLIとSkillをHomebrewの安定パスで導入でき、鍵は本人だけが読める", () => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "jev-setup-test-"));
+  try {
+    const configFile = path.join(temporary, ".config/jev-cu-jp/config.json");
+    saveProviderKey("typesafe", "test-key-value", configFile);
+    assert.equal(configuredProvider(configFile), "typesafe");
+    assert.equal(configuredKey("typesafe", configFile), "test-key-value");
+    assert.equal(readConfig(configFile).AI_GATEWAY_API_KEY, undefined);
+    if (process.platform !== "win32") assert.equal(fs.statSync(configFile).mode & 0o777, 0o600);
+    const command = "'/opt/homebrew/opt/jev-cu-jp/bin/jev-cu-jp' next";
+    const destination = installSkill("codex", { homeDir: temporary, command });
+    assert.match(fs.readFileSync(path.join(destination, "SKILL.md"), "utf8"), /opt\/homebrew\/opt\/jev-cu-jp\/bin\/jev-cu-jp/);
+    assert.throws(() => installSkill("codex", { homeDir: temporary, command }), /skill_already_exists/);
+    const version = spawnSync(process.execPath, ["scripts/cli.mjs", "--version"], { encoding: "utf8" });
+    assert.equal(version.status, 0);
+    assert.equal(version.stdout.trim(), "0.2.0");
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
 
 async function mockRun(options) {
   const traceDir = fs.mkdtempSync(path.join(os.tmpdir(), "jev-test-"));

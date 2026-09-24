@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { configuredKey, configuredProvider } from "./config.mjs";
 
 const PROJECT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -42,7 +43,10 @@ export function loadApiKey({
   } catch {
     /* 文件不存在时走统一报错 */
   }
-  throw new Error(`${envVar} が見つかりません。環境変数または ${envFile} に設定してください`);
+  const provider = Object.entries(PROVIDERS).find(([, value]) => value.envVar === envVar)?.[0];
+  const saved = provider ? configuredKey(provider) : null;
+  if (typeof saved === "string" && saved.trim()) return saved.trim();
+  throw new Error(`${envVar} が見つかりません。環境変数、.env.local、または setup コマンドで設定してください`);
 }
 
 export function estimateCostUsd(usage = {}) {
@@ -146,7 +150,7 @@ function buildDecisionRequest({ goal, app, candidates, context, recentActions, c
 export async function ask({
   state,
   questions,
-  provider = globalThis.process?.env?.JEV_PROVIDER || "typesafe",
+  provider = globalThis.process?.env?.JEV_PROVIDER || configuredProvider() || "typesafe",
   model,
   apiKey,
   endpoint,

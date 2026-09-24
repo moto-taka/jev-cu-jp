@@ -1,10 +1,13 @@
 {
   "name": "jev-cu-jp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Jev-assisted Computer Use for Japanese UI, with TypeSafe and Vercel AI Gateway support",
   "private": true,
   "engines": {
     "node": ">=20"
+  },
+  "bin": {
+    "jev-cu-jp": "scripts/cli.mjs"
   },
   "scripts": {
     "p0": "node scripts/p0-eval.mjs",

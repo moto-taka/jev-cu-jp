@@ -6,6 +6,19 @@ Jev chooses the next action from short labels observed in a browser or desktop a
 
 Only the goal, candidate roles and labels, and a short context are sent to Jev. Screenshots and Chrome profiles are not sent. Candidate labels can themselves contain personal data, so inspect them before each request.
 
+## Quick start on macOS
+
+Copy your TypeSafe key to the clipboard, then run:
+
+```bash
+brew install moto-taka/tap/jev-cu-jp
+jev-cu-jp setup codex --clipboard
+```
+
+The CLI and Codex Skill are installed. The key is saved in `~/.config/jev-cu-jp/config.json` with owner-only permissions. Restart Codex, then ask it to use jev-cu-jp in your open Chrome window. Replace `codex` with `claude` or `pi` for those hosts. For Vercel AI Gateway, use `jev-cu-jp setup codex --provider vercel --clipboard`.
+
+Homebrew does not provide a Computer Use tool. Each host still needs a way to control the running browser. Omit `--clipboard` if you prefer to provide the key through an environment variable at runtime.
+
 ## Setup
 
 Requires Node.js 20 or newer. There are no external npm packages.
@@ -66,6 +79,8 @@ node scripts/install-skill.mjs pi
 ```
 
 It installs to `~/.codex/skills/jev-cu-jp/`, `~/.claude/skills/jev-cu-jp/`, or `~/.pi/agent/skills/jev-cu-jp/`, embeds the absolute CLI path, and refuses to overwrite an existing skill. Restart the host after installation. To use an already open Chrome profile, configure the host's Computer Use tool to control that running session. This repository never copies a profile.
+
+With Homebrew, use `jev-cu-jp setup codex|claude|pi --clipboard` instead. `jev-cu-jp doctor` reports the provider and whether a key is available, without printing the key. The installed Skill points to a stable Homebrew command across upgrades.
 
 ## Verification and limitations
 

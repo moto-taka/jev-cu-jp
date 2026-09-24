@@ -6,36 +6,50 @@ import { fileURLToPath } from "node:url";
 
 const repoDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(repoDir, "skills/jev-cu-jp/SKILL.md"), "utf8");
-const destinations = {
-  codex: path.join(os.homedir(), ".codex/skills/jev-cu-jp"),
-  claude: path.join(os.homedir(), ".claude/skills/jev-cu-jp"),
-  pi: path.join(os.homedir(), ".pi/agent/skills/jev-cu-jp"),
+const locations = {
+  codex: ".codex/skills",
+  claude: ".claude/skills",
+  pi: ".pi/agent/skills",
 };
 
-function shellQuote(value) {
+export function shellQuote(value) {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-const args = process.argv.slice(2);
-const target = args[0];
-const dryRun = args[1] === "--dry-run";
-if (!Object.hasOwn(destinations, target) || args.length > (dryRun ? 2 : 1)) {
-  process.stderr.write("Usage: node scripts/install-skill.mjs codex|claude|pi [--dry-run]\n");
-  process.exit(2);
+export function installSkill(target, {
+  command = `node ${shellQuote(path.join(repoDir, "scripts/jev-next.mjs"))}`,
+  homeDir = os.homedir(),
+  dryRun = false,
+} = {}) {
+  if (!Object.hasOwn(locations, target)) throw new Error("invalid_target");
+  const destination = path.join(homeDir, locations[target], "jev-cu-jp");
+  try {
+    fs.lstatSync(destination);
+    throw new Error("skill_already_exists");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const content = source.replaceAll("{{NEXT_COMMAND}}", command);
+  if (content === source) throw new Error("skill_template_invalid");
+  if (!dryRun) {
+    fs.mkdirSync(destination, { recursive: true });
+    fs.writeFileSync(path.join(destination, "SKILL.md"), content, { flag: "wx", mode: 0o644 });
+  }
+  return destination;
 }
 
-const destination = destinations[target];
-if (fs.existsSync(destination)) {
-  process.stderr.write(`Skill already exists: ${destination}\n`);
-  process.exit(1);
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const args = process.argv.slice(2);
+  const dryRun = args[1] === "--dry-run";
+  if (args.length > (dryRun ? 2 : 1)) {
+    process.stderr.write("Usage: node scripts/install-skill.mjs codex|claude|pi [--dry-run]\n");
+    process.exit(2);
+  }
+  try {
+    const destination = installSkill(args[0], { dryRun });
+    process.stdout.write(`${dryRun ? "Would install" : "Installed"}: ${destination}\n`);
+  } catch (error) {
+    process.stderr.write(`${error?.message ?? "setup_failed"}\n`);
+    process.exitCode = 1;
+  }
 }
-const content = source.replaceAll("{{NEXT_COMMAND}}", `node ${shellQuote(path.join(repoDir, "scripts/jev-next.mjs"))}`);
-if (content === source) {
-  process.stderr.write("Skill template marker missing\n");
-  process.exit(1);
-}
-if (!dryRun) {
-  fs.mkdirSync(destination, { recursive: true });
-  fs.writeFileSync(path.join(destination, "SKILL.md"), content, { flag: "wx", mode: 0o644 });
-}
-process.stdout.write(`${dryRun ? "Would install" : "Installed"}: ${destination}\n`);

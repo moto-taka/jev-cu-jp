@@ -74,17 +74,17 @@ export async function evaluateNext(input, { decideFn = decide } = {}) {
   };
 }
 
-async function readInput() {
-  if (process.argv.length > 3) throw new Error("invalid_arguments");
-  if (process.argv[2]) return fs.readFile(process.argv[2], "utf8");
+async function readInput(args) {
+  if (args.length > 1) throw new Error("invalid_arguments");
+  if (args[0]) return fs.readFile(args[0], "utf8");
   let content = "";
   for await (const chunk of process.stdin) content += chunk;
   return content;
 }
 
-async function main() {
+export async function runNextCli(args = process.argv.slice(2)) {
   try {
-    const result = await evaluateNext(JSON.parse(await readInput()));
+    const result = await evaluateNext(JSON.parse(await readInput(args)));
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } catch (error) {
     const codes = new Set(["invalid_input", "invalid_candidates", "duplicate_candidate_index", "invalid_arguments"]);
@@ -95,4 +95,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) void main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) void runNextCli();

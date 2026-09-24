@@ -6,6 +6,19 @@ Jev に次の画面操作を選ばせ、実際の画面操作と結果確認は�
 
 Jev に送るのは、利用者が選んだ短い目標、候補の役割・ラベル、必要最小限の状態です。スクリーンショットやブラウザのプロファイルは送りません。ただし候補ラベルに個人情報が含まれれば送信対象になるため、呼び出し前に内容を確認してください。
 
+## いちばん簡単な始め方（macOS）
+
+TypeSafeの鍵をクリップボードにコピーしてから実行します。
+
+```bash
+brew install moto-taka/tap/jev-cu-jp
+jev-cu-jp setup codex --clipboard
+```
+
+これでCLIとCodex用Skillが入り、鍵は `~/.config/jev-cu-jp/config.json` に本人だけが読める権限で保存されます。Codexを再起動したら「今開いているChromeでjev-cu-jpを使って、○○して」と頼めます。Claude CodeやPiなら `codex` を `claude` または `pi` に変えます。Vercel AI Gatewayを使う場合は `setup codex --provider vercel --clipboard` です。
+
+Homebrewは画面操作ツールを追加しません。各エージェントが起動中のChromeを操作できる環境は別途必要です。鍵を保存したくない場合は `--clipboard` を省き、利用時に環境変数で渡せます。
+
 ## 準備
 
 Node.js 20 以降を用意し、リポジトリを取得します。外部 npm パッケージは不要です。
@@ -70,6 +83,8 @@ node scripts/install-skill.mjs pi
 ```
 
 登録先はそれぞれ `~/.codex/skills/jev-cu-jp/`、`~/.claude/skills/jev-cu-jp/`、`~/.pi/agent/skills/jev-cu-jp/` です。エージェントを再起動して読み込ませてください。Chromeのログイン状態を使う場合は、各Computer Useツールが**起動中のChrome**を操作できるようにします。このツールはChromeプロファイルをコピーしません。
+
+Homebrew版では `jev-cu-jp setup codex|claude|pi --clipboard` を使います。`jev-cu-jp doctor` で接続先と鍵の有無を確認できます（鍵の値は表示しません）。SkillはHomebrewの更新後も同じCLIを呼ぶように登録されます。
 
 ## 検証と制限
 
