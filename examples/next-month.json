@@ -1,0 +1,9 @@
+{
+  "goal": "次の月へ進む",
+  "app": "Chrome",
+  "candidates": [
+    { "index": 56, "role": "button", "label": "前の月" },
+    { "index": 58, "role": "button", "label": "次の月" }
+  ],
+  "context": "2026年9月"
+}
