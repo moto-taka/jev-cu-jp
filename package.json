@@ -1,6 +1,6 @@
 {
   "name": "jev-cu-jp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Jev-assisted Computer Use for Japanese UI, with TypeSafe and Vercel AI Gateway support",
   "private": true,
   "engines": {

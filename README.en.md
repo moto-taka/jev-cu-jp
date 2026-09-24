@@ -15,7 +15,7 @@ brew install moto-taka/tap/jev-cu-jp
 jev-cu-jp setup codex --clipboard
 ```
 
-The CLI and Codex Skill are installed. The key is saved in `~/.config/jev-cu-jp/config.json` with owner-only permissions. Restart Codex, then ask it to use jev-cu-jp in your open Chrome window. Replace `codex` with `claude` or `pi` for those hosts. For Vercel AI Gateway, use `jev-cu-jp setup codex --provider vercel --clipboard`.
+The CLI and Codex Skill are installed. Setup makes one short API call to verify the key before saving it in `~/.config/jev-cu-jp/config.json` with owner-only permissions. You can rerun the same setup command to update the key. Restart Codex, then ask it to use jev-cu-jp in your open Chrome window. Replace `codex` with `claude` or `pi` for those hosts. For Vercel AI Gateway, use `jev-cu-jp setup codex --provider vercel --clipboard`.
 
 Homebrew does not provide a Computer Use tool. Each host still needs a way to control the running browser. Omit `--clipboard` if you prefer to provide the key through an environment variable at runtime.
 

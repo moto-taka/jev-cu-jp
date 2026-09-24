@@ -20,17 +20,23 @@ export function installSkill(target, {
   command = `node ${shellQuote(path.join(repoDir, "scripts/jev-next.mjs"))}`,
   homeDir = os.homedir(),
   dryRun = false,
+  allowExisting = false,
 } = {}) {
   if (!Object.hasOwn(locations, target)) throw new Error("invalid_target");
   const destination = path.join(homeDir, locations[target], "jev-cu-jp");
-  try {
-    fs.lstatSync(destination);
-    throw new Error("skill_already_exists");
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-  }
   const content = source.replaceAll("{{NEXT_COMMAND}}", command);
   if (content === source) throw new Error("skill_template_invalid");
+  let exists = false;
+  try { fs.lstatSync(destination); exists = true; }
+  catch (error) { if (error?.code !== "ENOENT") throw error; }
+  if (exists) {
+    if (allowExisting) {
+      try {
+        if (fs.readFileSync(path.join(destination, "SKILL.md"), "utf8") === content) return destination;
+      } catch { /* Keep the existing directory untouched. */ }
+    }
+    throw new Error("skill_already_exists");
+  }
   if (!dryRun) {
     fs.mkdirSync(destination, { recursive: true });
     fs.writeFileSync(path.join(destination, "SKILL.md"), content, { flag: "wx", mode: 0o644 });

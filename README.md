@@ -15,7 +15,7 @@ brew install moto-taka/tap/jev-cu-jp
 jev-cu-jp setup codex --clipboard
 ```
 
-これでCLIとCodex用Skillが入り、鍵は `~/.config/jev-cu-jp/config.json` に本人だけが読める権限で保存されます。Codexを再起動したら「今開いているChromeでjev-cu-jpを使って、○○して」と頼めます。Claude CodeやPiなら `codex` を `claude` または `pi` に変えます。Vercel AI Gatewayを使う場合は `setup codex --provider vercel --clipboard` です。
+これでCLIとCodex用Skillが入り、鍵は `~/.config/jev-cu-jp/config.json` に本人だけが読める権限で保存されます。設定時に短いAPI呼び出しで鍵を確認し、失敗した鍵は保存しません。同じ `setup` コマンドを再実行して鍵を更新できます。Codexを再起動したら「今開いているChromeでjev-cu-jpを使って、○○して」と頼めます。Claude CodeやPiなら `codex` を `claude` または `pi` に変えます。Vercel AI Gatewayを使う場合は `setup codex --provider vercel --clipboard` です。
 
 Homebrewは画面操作ツールを追加しません。各エージェントが起動中のChromeを操作できる環境は別途必要です。鍵を保存したくない場合は `--clipboard` を省き、利用時に環境変数で渡せます。
 

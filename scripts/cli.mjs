@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { configuredKey, configuredProvider, CONFIG_FILE, saveProviderKey } from "./config.mjs";
 import { installSkill, shellQuote } from "./install-skill.mjs";
+import { decide } from "./jev-decide.mjs";
 import { runNextCli } from "./jev-next.mjs";
 
 const packageInfo = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -46,17 +47,39 @@ async function readKey(source) {
   return value.trim();
 }
 
+export async function verifyApiKey(provider, key, { decideFn = decide } = {}) {
+  try {
+    await decideFn({
+      goal: "次の月へ進む",
+      app: "Setup",
+      candidates: [
+        { index: 1, role: "button", label: "前の月" },
+        { index: 2, role: "button", label: "次の月" },
+      ],
+      provider,
+      apiKey: key,
+      maxRetries: 0,
+      timeoutMs: 15_000,
+    });
+  } catch (error) {
+    throw new Error([401, 403].includes(error?.status) ? "invalid_api_key" : "connection_failed");
+  }
+}
+
 async function setup(args) {
   const { host, provider, keySource } = parseSetup([...args]);
   const executable = process.env.JEV_CU_JP_COMMAND
     ? shellQuote(process.env.JEV_CU_JP_COMMAND)
     : `node ${shellQuote(fileURLToPath(import.meta.url))}`;
   const command = `${executable} next`;
-  installSkill(host, { command, dryRun: true });
+  installSkill(host, { command, dryRun: true, allowExisting: true });
   const key = keySource ? await readKey(keySource) : null;
   if (keySource && (!key || key.length > 8192)) throw new Error("empty_api_key");
-  if (key) saveProviderKey(provider, key);
-  const destination = installSkill(host, { command });
+  if (key) {
+    await verifyApiKey(provider, key);
+    saveProviderKey(provider, key);
+  }
+  const destination = installSkill(host, { command, allowExisting: true });
   process.stdout.write(`Skill installed: ${destination}\n`);
   if (key) process.stdout.write(`Key saved locally for ${provider}: ${CONFIG_FILE}\n`);
   else process.stdout.write(`Set ${keyNames[provider]} or run setup with --clipboard / --key-stdin.\n`);
@@ -93,6 +116,7 @@ async function main() {
     const codes = new Set([
       "invalid_arguments", "invalid_target", "invalid_provider", "skill_already_exists",
       "clipboard_requires_macos", "clipboard_unavailable", "empty_api_key",
+      "invalid_api_key", "connection_failed",
     ]);
     process.stderr.write(`${codes.has(error?.message) ? error.message : "setup_failed"}\n`);
     process.exitCode = 1;
